@@ -800,3 +800,163 @@ tensor(3.7417)
 tensor(3.4641)
 ```
 
+
+
+
+
+## 2.4 微积分
+
+### 1.可导即可微(Differentiable)，数学表示:若$f\prime(a)$存在，则f在a处可微
+
+* 导数:$f\prime(x)=lim_{h->0}\frac{f(x+h)-f(x)}{h}$,解释为f(x)相对于x的瞬时变化率，也可以表示为曲线上某点的斜率
+* 等价式:$f\prime(x) = y\prime = \frac{dy}{dx} = \frac{df}{dx} = \frac{d}{dx}f(x) = Df(x) = D_xf(x)$。其中，D称之为微分运算符，表示微分操作
+
+### 2.微分操作常见规则，其中f(x)和g(x)均可微
+
+* $DC = 0$
+* $Dx^n=x^{n-1}$，称之为幂律(Power Rule)
+* $De^x=e^x$
+* $DIn(x)=\frac{1}{x}$
+* $\frac{d}{dx}[Cf(x)]=C\frac{d}{dx}f(x)$
+* $\frac{d}{dx}[f(x)+g(x)]=\frac{d}{dx}f(x)+\frac{d}{dx}g(x)$
+* $\frac{d}{dx}[f(x)g(x)]=f(x)\frac{d}{dx}[g(x)]+g(x)\frac{d}{dx}[f(x)]$
+* $\frac{d}{dx}[\frac{f(x)}{g(x)}]=\frac{g(x)\frac{d}{dx}[f(x)]-f(x)\frac{d}{dx}[g(x)]}{[g(x)]^2}$
+
+### 3.偏导数(Partial Derivative)：
+
+* 数学表达：$\frac{\partial y}{\partial x_i} = \lim_{{\Delta x_i \to 0}} \frac{y(x_1, x_2, \ldots, x_i + \Delta x_i, \ldots, x_n) - y(x_1, x_2, \ldots, x_i, \ldots, x_n)}{\Delta x_i}$
+
+* 等价式：$\frac{\partial y}{\partial x_i}=\frac{\partial f}{\partial x_i}=f_{x_i}=f_i=D_if=F_{x_i}f$
+
+* 简化理解，只需对特定变量求导，其余变量看作常量
+
+### 4.梯度(Gradient)：通过连接一个多元函数对其所有变量的偏导数而得到梯度向量
+
+* 数学表达(向量x的梯度)：$\nabla_x f = [\frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x_2}, \ldots, \frac{\partial f}{\partial x_n}]^T$，其中，一般情况下$\nabla_x$可被$\nabla$替代
+* 设x为n维向量，A为矩阵，有以下常用规则：
+    * 对于所有$A∈R^{m×n}$，存在$\nabla_xAx=A^T$
+    * 对于所有$A∈R^{n×m}$，存在$\nabla_xx^TA=A$
+    * 对于所有$A∈R^{n×n}$，存在$\nabla_xx^TAx=(A+A^T)x$
+    * $\nabla_x||x||^2=\nabla_xx^Tx=2x$。$||x||^2$表示L2范数的平方，即向量x所有元素的平方和
+
+### 5.链式法则：有时候，多元函数可能是复合的，即函数y有变量u，而u实际上也是个函数，里面有变量x，此时可以通过链式法则来求微分
+
+* 数学表达：$\frac{dy}{dx} = \frac{dy}{dg} \cdot \frac{dg}{dx}$
+* 若可微函数y存在$u_1,u_2,...,u_m$，而每个变量u都存在变量$x_1,x_2,...,x_n$。对于任意i=1,2,3,...,n，由链式法则可得到公式：$\frac{\partial y}{\partial x_i} = \frac{\partial y}{\partial u_1} \cdot \frac{\partial u_1}{\partial x_i} + \frac{\partial y}{\partial u_2} \cdot \frac{\partial u_2}{\partial x_i} + \ldots + \frac{\partial y}{\partial u_m} \cdot \frac{\partial u_m}{\partial x_i}$
+
+
+
+
+
+## 2.5 自动微分
+
+### 1.定义：Pytorch通过自动计算导数来加快求导，此过程称之为自动微分(Automatic Differentiation)。
+
+* DL框架会根据设计好的模型，构建一个计算图(Computational Graph)，来跟踪计算是哪些数据通过哪些操作组合起来产生输出。
+* 自动微分使系统能够随后反向传播梯度。反向传播(Backpropagate)意味着追踪整个计算图，填充每个参数的偏导数
+
+### 2.在Pytorch中使用自动微分
+
+* requires_grad_(True)：跟踪对该张量的所有操作，以便计算梯度。可在创建向量时在括号内声明，如torch.arange(5.0,requires_grad=True)
+* .grad：属性，用于查看某向量的梯度。梯度也是一个向量，其大小与向量大小一致
+* .backward()：反向传播函数，计算每个分量的梯度
+* .grad.zero_()：清空梯度，若不清空，则会累加梯度
+
+```python
+# PROGRAM
+x = torch.arange(4.0, requires_grad=True)
+print(x.grad)
+
+y = 2 * torch.dot(x, x)  # 相当于y=2x^2，y`=4x，反向传播将其应用到向量x的每一个元素上
+y.backward()
+print(x.grad)  
+
+y = x.sum()
+y.backward()  # 未清空梯度，会以+的方式累加
+print(x.grad)
+
+y = x.sum()
+x.grad.zero_()
+y.backward()
+print(x.grad)
+
+# RESULT
+None
+tensor([ 0.,  4.,  8., 12.])
+tensor([ 1.,  5.,  9., 13.])
+tensor([1., 1., 1., 1.])
+```
+
+
+
+### 3.非标量变量的反向传播：一般的反向传播需要变量是标量，若非标量，则单独计算批量中每个样本的偏导数之和
+
+```python
+# PROGRAM
+x = torch.arange(4.0, requires_grad=True)
+y = x*x  # y是一个向量
+
+y.backward(torch.ones(len(x)))  # 对于非标量，需要传入一个gradient参数，指定微分函数关于self的梯度
+# y.sum().backward()  # 与上面语句等价
+
+print(x.grad)
+
+# RESULT
+tensor([0., 2., 4., 6.])
+```
+
+
+
+### 4.分离计算：将某个变量从计算图中分离，丢弃关于如何计算y的任何信息。
+
+* detach()：将某个变量从计算图中分离，并返回一个变量u，此u与原来的变量有着相同的值，但作为常数处理。
+
+```python
+x = torch.arange(4.0, requires_grad=True)
+y = x*x
+u = y.detach()  # 在计算图中分离y变量，反向传播时将不会溯源道x*x
+
+z = u*x  # u当作常量处理，z`= u
+z.sum().backward()
+print(x.grad == u)
+
+x.grad.zero_()
+y.sum.backward()  # y之前的计算并没有被分离。可以看作 x -连接- y -断开- z
+print(x.grad == 2*x)
+
+# 以下内容是错误的，会报错，因为y已经从计算图中分离
+z = y*x
+z.sum().backward()
+print(x.grad == 2*x*x)
+
+
+# RESULT
+tensor([True, True, True, True])
+tensor([True, True, True, True])
+```
+
+
+
+### 5.自定义梯度计算：自定义一个函数来计算梯度
+
+```python
+# PROGRAM
+def f(x):
+	b = a * 2
+	return b
+
+
+a = torch.arange(4.0, requires_grad=True)
+y = f(a)  # y` = b` = 2
+print(y)
+
+y.sum().backward()
+print(a.grad)
+
+# RESULT
+tensor([0., 2., 4., 6.], grad_fn=<MulBackward0>)
+tensor([2., 2., 2., 2.])"
+
+
+```
+
