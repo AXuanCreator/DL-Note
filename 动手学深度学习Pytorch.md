@@ -1145,7 +1145,7 @@ $$
 
 ## 3.2 线性回归的实现
 
-1.生成数据集：一个包含1000个样本，且每个样本包含从正态分布中抽样的两个特征。即$X∈R^{1000×2}$
+### 1.生成数据集：一个包含1000个样本，且每个样本包含从正态分布中抽样的两个特征。即$X∈R^{1000×2}$
 
 * 参数：$w = [2,-3.4]^T,b=4.2$，具有噪声项$\epsilon \sim N(0,\sigma^2 )，\sigma = 0.01$
 * torch.normal(mean, std, size, *, generator=None, out=None) → Tensor：用于生成服从正态分布的随机数
@@ -1206,7 +1206,7 @@ tensor([9.5199])
 
 
 
-2.读取数据集：打乱数据集中的样本并以小批量方式获取数据
+### 2.读取数据集：打乱数据集中的样本并以小批量方式获取数据
 
 ```python
 # PROGRAM
@@ -1261,17 +1261,16 @@ tensor([[ 1.9054,  0.0446],
 
 
 
-3.初始化模型参数：初始化w和b，而目的是在训练中更新这些参数
+### 3.初始化模型参数：初始化w和b，而目的是在训练中更新这些参数
 
 ```python
-# PROGRAM
 w = torch.normal(0, 0.01, size=(2, 1), requires_grad=True)
 b = torch.zeros(1, requires_grad=True)
 ```
 
 
 
-4.定义模型：将模型的输入和参数同模型的输出相关联
+### 4.定义模型：将模型的输入和参数同模型的输出相关联
 
 * Xw是一个向量，b是一个标量
 * 广播机制：向量+标量=标量被加到向量的每个分量上
@@ -1290,5 +1289,346 @@ def linreg(X, w, b):
 
 
 
-5.定义损失函数：用于计算损失函数的梯度，在此使用平方损失函数
+### 5.定义损失函数：用于计算损失函数的梯度，在此使用平方损失函数
+
+```python
+def squared_loss(y_hat, y):
+	"""
+	均方损失
+	:param y_hat: 预测值
+	:param y: 真实值
+	:return: loss
+	"""
+	return (y_hat - y.reshape(y_hat.shape)) ** 2 / 2  # 差值平方/2
+```
+
+
+
+### 6.定义优化算法：sgd函数是一个实现小批量梯度下降的函数。这是一种优化算法，用于找到函数的最小值，即更新参数w和b
+
+* params：这是一个包含模型参数的列表。在这个例子中，参数是权重w和偏置b。
+* lr：这是学习率，它决定了参数更新的步长。学习率越大，参数更新的步长越大，反之亦然。
+* batch_size：这是每个小批量的大小。
+* with torch.no_grad()：这是一个上下文管理器，用于禁止在其作用范围内的操作跟踪历史，并形成反向传播的计算图。在更新模型参数时，我们实际上不需要计算梯度，因此我们使用torch.no_grad()来确保在更新参数时不会计算不必要的梯度，从而提高代码的效率
+* param.grad.zero_()：这是将梯度归零的步骤。在PyTorch中，梯度是累积的，这意味着每次我们计算梯度，新的梯度值会被添加到已经存在的梯度值上，而不是替换它。因此，我们需要在每次更新参数后，手动将梯度归零，以防止梯度的累积
+    * with torch.no_grad() 和 param.grad.zero_() 是用于处理不同问题的。前者用于防止在特定代码块中计算梯度，后者用于在每次梯度更新后清零梯度
+
+```python
+def sgd(params, lr, batch_size):
+	"""
+	小批量梯度下降
+	:param params: 模型参数集合
+	:param lr: 学习率
+	:param batch_size: 每一次的批次大小
+	:return: None
+	"""
+	with torch.no_grad():
+		for param in params:
+			param -= lr * param.grad / batch_size
+			param.grad.zero_()
+```
+
+
+
+### 7.训练：在每次迭代中读取小批量训练样本，并通过模型获得一组预测；然后计算损失，并进行反向传播，存储每个参数的梯度；最后使用sgd优化参数来更新参数，并清空梯度
+
+* 超参数：轮次(epoch)和学习率(lr)，需要不断尝试调整
+
+```python
+lr = 0.03
+num_epochs = 3
+net = linreg
+loss = squared_loss
+
+for epoch in range(num_epochs):
+	for X, y in data_iter(batch_size=10, features=features, labels=labels):
+		l = loss(net(X, w, b), y)  # 设定小批量数据模型并计算损失
+		l.sum().backward()  # 求和并反向传播
+		sgd([w, b], lr, batch_size=10)  # 更新参数
+
+	# 查看所有样本在模型上的损失，越小越好
+	with torch.no_grad():
+		train_l = loss(net(features, w, b), labels)
+		print(f'Epoch : {epoch + 1} || Loss : {float(train_l.mean()):f}')
+
+# 输出误差
+print(f'w的估计误差: {true_w - w.reshape(true_w.shape)}')
+print(f'b的估计误差: {true_b - b}')
+```
+
+
+
+### 8.完整实现
+
+```python
+# PROGRAM
+import random
+import torch
+from d2l import torch as d2l
+
+def synthetic_data(w, b, num_examples):
+	"""
+	生成y=Xw+b+噪声的数据集
+	:param w: 权重
+	:param b: 偏置
+	:param num_examples:数据集大小
+	:return: X,y
+	"""
+	X = torch.normal(0, 1, (num_examples, len(w)))
+	y = torch.matmul(X, w) + b
+	y += torch.normal(0, 0.01, y.shape)
+	return X, y.reshape((-1, 1))
+
+
+def data_iter(batch_size, features, labels):
+	"""
+	读取数据集
+	:param batch_size: 每一个批次的大小
+	:param features: 特征
+	:param labels: 标签
+	:return: None
+	"""
+	num_examples = len(features)
+	includes = list(range(num_examples))  # 读取索引
+	random.shuffle(includes)  # 打乱读取顺序
+
+	for i in range(0, num_examples, batch_size):
+		# 每次读取batch_size个样本
+		batch_indices = torch.tensor(includes[i:min(i + batch_size, num_examples)])
+		yield features[batch_indices], labels[batch_indices]  # 返回迭代器
+
+
+def linreg(X, w, b):
+	"""
+	线性回归模型
+	:param X: 特征
+	:param w: 权重
+	:param b: 偏置
+	:return: y
+	"""
+	return torch.matmul(X, w) + b
+
+
+def squared_loss(y_hat, y):
+	"""
+	均方损失
+	:param y_hat: 预测值
+	:param y: 真实值
+	:return: loss
+	"""
+	return (y_hat - y.reshape(y_hat.shape)) ** 2 / 2  # 差值平方/2
+
+
+def sgd(params, lr, batch_size):
+	"""
+	小批量梯度下降
+	:param params: 模型参数集合
+	:param lr: 学习率
+	:param batch_size: 每一次的批次大小
+	:return: None
+	"""
+	with torch.no_grad():
+		for param in params:
+			param -= lr * param.grad / batch_size
+			param.grad.zero_()
+
+
+true_w = torch.tensor([2, -3.4])
+true_b = 4.2
+features, labels = synthetic_data(true_w, true_b, 1000)  # 生成数据集。features是特征(坐标点)，labels是标签(真实值)
+
+# 未经训练的w和b
+w = torch.normal(0, 0.01, size=(2, 1), requires_grad=True)  
+b = torch.zeros(1, requires_grad=True)
+
+lr = 0.03
+num_epochs = 3
+net = linreg
+loss = squared_loss
+
+for epoch in range(num_epochs):
+	for X, y in data_iter(batch_size=10, features=features, labels=labels):  # X是小批量特征，y是小批量标签值
+		l = loss(net(X, w, b), y)  # 计算模型得到的预测值和真实的标签值的损失，l是一个形状为(batch_size,1)的张量
+		l.sum().backward()  # 求和并反向传播
+		sgd([w, b], lr, batch_size=10)  # 更新参数
+
+	# 查看所有样本在模型上的损失，越小越好
+	with torch.no_grad():
+		train_l = loss(net(features, w, b), labels)
+		print(f'Epoch : {epoch + 1} || Loss : {float(train_l.mean()):f}')
+
+# 输出误差
+print(f'w的估计误差: {true_w - w.reshape(true_w.shape)}')
+print(f'b的估计误差: {true_b - b}')
+
+
+# RESULT
+
+```
+
+
+
+
+
+## 3.3 线性回归的简洁实现
+
+### 1.依赖库：
+
+```python
+import torch
+from torch.utils import data
+from d2l import torch as d2l
+from torch import nn
+```
+
+
+
+### 2.生成数据集：使用d2l自带的函数synthetic_data
+
+```python
+true_w = torch.tensor([2, -3.4])
+true_b = 4.2
+features, labels = d2l.synthetic_data(true_w, true_b, 1000)
+```
+
+
+
+### 3.读取数据集
+
+* data.TensorDataset：PyTorch中的一个类，用于包装数据和目标张量。
+* data.DataLoader是PyTorch中的一个类，它用于创建一个可迭代的数据加载器，这个数据加载器可以对数据进行批量处理，打乱数据，并且支持多线程数据加载
+
+```python
+def load_array(data_arrays, batch_size, is_train=True):
+	"""构造一个PyTorch数据迭代器。"""
+	dataset = data.TensorDataset(*data_arrays)  # 将data_arrays中的数据转换为一个张量数据集。
+	return data.DataLoader(dataset, batch_size, shuffle=is_train)
+
+batch_size = 10
+data_iter = load_array((features, labels), batch_size)  # 迭代器，获取小批量训练数据
+```
+
+
+
+### 4.定义模型
+
+* nn.Sequential：是PyTorch中的一个类，它是一个有序的模块容器。模块将按照在传入构造器的顺序添加到容器中。另外，也可以传入一个有序字典。简单来说，Sequential类将多个层串联在一起，在输入数据中，会传入到第一层，并将第一层的输出输入到第二层，以此类推。
+
+    * 以下代码虽然只有一层，但出于习惯，依旧使用Sequential、
+* nn.Linear是PyTorch中的一个类，它用于实现线性变换。这个类的构造函数接受两个参数：输入特征的数量和输出特征的数量。
+    * 若输入w=[1,2]，X=[2,3]，b=2，则输出为1*2 + 2\*3 + 2
+
+
+```python
+net = nn.Sequential(nn.Linear(2,1))  # 一个线性层，有两个输入和一个输出
+```
+
+
+
+### 5.初始化模型参数：直接在网络上进行修改
+
+* 通过weight.data和bias.data来访问参数
+* normal_()：是PyTorch张量的一个方法，用于将张量的值初始化为服从正态分布的随机数。这个方法接受两个参数：分布的均值和标准差
+* fill_()：是PyTorch张量的一个方法，用于将张量的所有元素设置为指定的值
+    * 即偏置值初始化为0
+
+```python
+net[0].weight.data.normal_(0, 0.01)
+net[0].bias.data.fill_(0)
+```
+
+
+
+### 6.定义损失函数
+
+* nn.MESLoss：这是一个Pytorch类，用于计算均方误差，同时也称之为平方$L_2$范数。默认情况下，会返回所有样本损失的平均值
+
+```python
+loss = nn.MSELoss()
+```
+
+
+
+### 7.定义优化算法
+
+* torch.optim.SGD：PyTorch中的一个类，它实现了随机梯度下降（SGD）优化算法。这个类的构造函数接受两个参数：要优化的参数和学习率
+* net.parameters()：PyTorch中的一个方法，用于获取模型的所有参数。这些参数包括模型的权重和偏置等。这个方法返回一个生成器，可以用于迭代访问模型的所有参数。
+
+```python
+trainer = torch.optim.SGD(net.parameters(), lr=0.03)
+```
+
+
+
+### 8.训练
+
+* 前向传播：通过net生成预测并计算损失
+
+* 反向传播：计算梯度
+* 优化器SGD：更新参数
+
+```python
+num_epochs = 3
+for epoch in range(num_epochs):
+	for X, y in data_iter:
+		l = loss(net(X), y)
+		trainer.zero_grad()  # 清空梯度
+		l.backward()
+		trainer.step()  # 更新模型的参数
+
+	l = loss(net(features), labels)  # 查看模型的训练表现
+	print(f'Epoch {epoch + 1} || Loss {l:f}')
+```
+
+
+
+### 9.完整实现
+
+```python
+# PROGRAM
+import torch
+from torch.utils import data
+from d2l import torch as d2l
+from torch import nn
+
+
+def load_array(data_arrays, batch_size, is_train=True):
+	"""构造一个PyTorch数据迭代器。"""
+	dataset = data.TensorDataset(*data_arrays)  # 将data_arrays中的数据转换为一个张量数据集。
+	return data.DataLoader(dataset, batch_size, shuffle=is_train)
+
+
+true_w = torch.tensor([2, -3.4])
+true_b = 4.2
+features, labels = d2l.synthetic_data(true_w, true_b, 1000)
+
+batch_size = 10
+data_iter = load_array((features, labels), batch_size)
+
+net = nn.Sequential(nn.Linear(2, 1))
+
+net[0].weight.data.normal_(0, 0.01)
+net[0].bias.data.fill_(0)
+
+loss = nn.MSELoss()
+
+trainer = torch.optim.SGD(net.parameters(), lr=0.03)
+
+num_epochs = 3
+for epoch in range(num_epochs):
+	for X, y in data_iter:
+		l = loss(net(X), y)
+		trainer.zero_grad()  # 清空梯度
+		l.backward()
+		trainer.step()  # 更新模型的参数
+
+	l = loss(net(features), labels)  # 查看模型的训练表现
+	print(f'Epoch {epoch + 1} || Loss {l:f}')
+    
+    
+# RESULT
+Epoch 1 || Loss 0.000307
+Epoch 2 || Loss 0.000105
+Epoch 3 || Loss 0.000104
+```
 
