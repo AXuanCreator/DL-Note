@@ -914,7 +914,7 @@ tensor([0., 2., 4., 6.])
 ```python
 x = torch.arange(4.0, requires_grad=True)
 y = x*x
-u = y.detach()  # 在计算图中分离y变量，反向传播时将不会溯源道x*x
+u = y.detach()  # 在计算图中分离y变量，反向传播时将不会溯源到x*x
 
 z = u*x  # u当作常量处理，z`= u
 z.sum().backward()
@@ -959,4 +959,336 @@ tensor([2., 2., 2., 2.])"
 
 
 ```
+
+
+
+
+
+## 2.6 概率
+
+### 1.概率论常见词汇：
+
+* 抽样(Sampling) : 从概率分布中抽取样本
+* 分布(Distribution)：事件的概率分配
+* 多项分配(Multinomial Distribution)：将概率分配给出一些离散选择
+
+* 样本空间(Sample Space)：一个包含所有可能的结果的集合，也叫结果空间
+* 事件(Event)：一组给定样本空间的随机结果
+
+### 2.概率(Probability)：将集合映射到真实值的函数。在样本空间S，事件A的概率为P(A)
+
+* $P(A) ≥0$
+* $P(S) = 1$
+* 若A为互斥事件(Mutually Exclusive)，对于任意可数序列$A_i$，存在$P(U_{i=1}^{∞})=\sum_{i=1}^∞P(A_i)$
+
+### 3.联合概率(Joint Probability)：$P(A=a,B=b)$，给定任意值a,b：A=a和B=b同时满足的概率是多少
+
+### 4.条件概率(Conditional Probability)：$P(B=b|A=a)$，给定任意值a,b：在A=a满足的条件下，B=b也满足的概率是多少
+
+### 5.贝叶斯定理(Bayes'theorem)：$P(A|B)=\frac{P(B|A)P(A)}{P(B)}$
+
+### 6.边际化(Marginalization：$P(B)=\sum_AP(A,B)$：对于二维分布，B的概率相当于计算A的所有可能选择，即行相加 或者列相加
+
+* 其结果的概率或分布称之为边际概率(Marginal Probability)或边际分布(Marginal Distribution
+
+### 7.独立性(Independence)：两个事件相互独立，存在着
+
+* $P(A|B)=P(A)$
+* $P(AB)=P(A)P(B)$
+
+### 8.期望(Expectation)：概括概率分布的关键特征
+
+* 一个随机变量X的期望：$E(X)=\sum_xxP(X=x)$
+
+*  当函数f(x)的x是从分布P中抽取的，f(x)的期望：$E_{x->P}[f(x)]=\sum_xf(x)P(x)$
+
+### 9.方差：衡量随机变量X与其期望的偏差：$Var[X]=E[(X-E[X])^2]=E[X^2]-E[X]^2$
+
+* 标准差：方差的平方根
+* $Var[f(x)]=E[(f(x)-E[f(x)]^2]$
+
+
+
+
+
+## 2.7 查阅文档
+
+### 1.dir()：查看模块中可以调用哪些函数和类
+
+```python
+# PROGRAM
+import torch
+
+print(dir(torch.distributions))
+
+# RESULT
+['AbsTransform', 'AffineTransform', 'Bernoulli', 'Beta', 'Binomial', 'CatTransform', 'Categorical', 'Cauchy', 'Chi2', 'ComposeTransform', 'ContinuousBernoulli', 'CorrCholeskyTransform', 'CumulativeDistributionTransform', 'Dirichlet', 'Distribution', 'ExpTransform', 'Exponential', 'ExponentialFamily', 'FisherSnedecor', 'Gamma', 'Geometric', 'Gumbel', 'HalfCauchy', 'HalfNormal', 'Independent', 'IndependentTransform', 'Kumaraswamy', 'LKJCholesky', 'Laplace', 'LogNormal', 'LogisticNormal', 'LowRankMultivariateNormal', 'LowerCholeskyTransform', 'MixtureSameFamily', 'Multinomial', 'MultivariateNormal', 'NegativeBinomial', 'Normal', 'OneHotCategorical', 'OneHotCategoricalStraightThrough', 'Pareto', 'Poisson', 'PositiveDefiniteTransform', 'PowerTransform', 'RelaxedBernoulli', 'RelaxedOneHotCategorical', 'ReshapeTransform', 'SigmoidTransform', 'SoftmaxTransform', 'SoftplusTransform', 'StackTransform', 'StickBreakingTransform', 'StudentT', 'TanhTransform', 'Transform', 'TransformedDistribution', 'Uniform', 'VonMises', 'Weibull', 'Wishart', '__all__', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__path__', '__spec__', 'bernoulli', 'beta', 'biject_to', 'binomial', 'categorical', 'cauchy', 'chi2', 'constraint_registry', 'constraints', 'continuous_bernoulli', 'dirichlet', 'distribution', 'exp_family', 'exponential', 'fishersnedecor', 'gamma', 'geometric', 'gumbel', 'half_cauchy', 'half_normal', 'identity_transform', 'independent', 'kl', 'kl_divergence', 'kumaraswamy', 'laplace', 'lkj_cholesky', 'log_normal', 'logistic_normal', 'lowrank_multivariate_normal', 'mixture_same_family', 'multinomial', 'multivariate_normal', 'negative_binomial', 'normal', 'one_hot_categorical', 'pareto', 'poisson', 'register_kl', 'relaxed_bernoulli', 'relaxed_categorical', 'studentT', 'transform_to', 'transformed_distribution', 'transforms', 'uniform', 'utils', 'von_mises', 'weibull', 'wishart']
+```
+
+
+
+### 2.help()：查找特定函数和类的用法
+
+```python
+# PROGRAM
+print(help(torch.ones))
+
+# RESULT
+Help on built-in function ones in module torch:
+
+ones(...)
+    ones(*size, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False) -> Tensor
+    
+    Returns a tensor filled with the scalar value `1`, with the shape defined
+    by the variable argument :attr:`size`.
+    
+    Args:
+        size (int...): a sequence of integers defining the shape of the output tensor.
+            Can be a variable number of arguments or a collection like a list or tuple.
+    
+    Keyword arguments:
+        out (Tensor, optional): the output tensor.
+        dtype (:class:`torch.dtype`, optional): the desired data type of returned tensor.
+            Default: if ``None``, uses a global default (see :func:`torch.set_default_tensor_type`).
+        layout (:class:`torch.layout`, optional): the desired layout of returned Tensor.
+            Default: ``torch.strided``.
+        device (:class:`torch.device`, optional): the desired device of returned tensor.
+            Default: if ``None``, uses the current device for the default tensor type
+            (see :func:`torch.set_default_tensor_type`). :attr:`device` will be the CPU
+            for CPU tensor types and the current CUDA device for CUDA tensor types.
+        requires_grad (bool, optional): If autograd should record operations on the
+            returned tensor. Default: ``False``.
+    
+    Example::
+    
+        >>> torch.ones(2, 3)
+        tensor([[ 1.,  1.,  1.],
+                [ 1.,  1.,  1.]])
+    
+        >>> torch.ones(5)
+        tensor([ 1.,  1.,  1.,  1.,  1.])
+
+None
+```
+
+
+
+
+
+# 第三章 线性神经网络
+
+## 3.1 线性回归
+
+### 1.回归(Regression)：用来表示输入和输出的关系，能为一个或多个自变量和因变量之间的关系建模
+
+### 2.线性模型：公式: $Predict = Aw + b$，此公式也被称之为仿射变换(Affine Transformation)
+
+* A为特征集合。当A是一个含有d个输入特征时，可以表示为 $y\hat{} = w_1x_1 + w_2x_2 + ... + w_dx_d + b $
+* w为权重。w是一个向量，包含了A中每个特征与当前层代求节点之间的权重值
+* b为偏置(bias)。偏置是指当所有特征都取值为0时，预测值应该为多少才符合现实情况
+
+### 3.损失函数(Loss Function)：量化目标的实际值和预测值之间的差距
+
+* 通常选择非负数作为损失，且数值越小则表示损失越小，完美预测时损失为0
+* 回归问题中常用的损失函数是平方误差函数。当样本i的预测值为$\hat{y}^{(i)}$,与其相对应的真实标签为$y^{(i)}$时，平均误差函数为：
+    * $l^{(i)}(w,b)=\frac{1}{2}(\hat{y}^{(i)}-y^{(i)})^2$
+* 度量模型在整个数据集上的表现，需要计算在训练集n个样本上的损失均值
+    * $L(w,b)=\frac{1}{n}\sum_{i=1}^nl^{(i)}(w,b)$
+* 在训练模型时，希望能够得到一组最好的w和b，使总损失最小：$w^*,b^*=argminL(w,b)$
+
+### 4.解析解(Analytical Solution)：线性回归的解可以使用公式表达：$w^*=(X^TX)^{-1}X^Ty$
+
+* 其中，偏置b被合并到权重w中，以附加列的形式
+
+* 如y=0.5x是解析解；y=2，x=4是数值解
+
+### 5.随机梯度下降(Gradient Descent)：通过不断地在损失函数递减的方向上更新参数来降低误差
+
+* 在每次计算更新的时候随机抽取一小批样本进行计算损失函数，以提高效率，称之为小批量随机梯度下降(Minibatch Stochastic Gradient Descent)
+* 在每次迭代中，随机抽取一个小批量样本B，计算小批量的损失均值关于模型参数的偏导数，并将其乘以一个预设定的正数$\eta$。最后使用当前的参数值减去得到的值，更新参数：$(w,b)\leftarrow(w,b)-\frac{\eta}{|B|}\sum_{i∈B}\partial_{(w,b)}l^{(i)}(w,b)$。其中，w个x均为向量
+    * 超参数(Hyperparameter)：表示预先手动设置的参数，影响训练结果；调整参数的过程称之为调参(Hyperparameter Tuning)；以下是公式中的超参数：
+        * |B|表示批量大小(Batch Size)
+        * $\eta$表示学习率(Learning Rate)
+    * 若要单独更新参数，可以只对这个参数求偏导：
+    * $w\leftarrow w -\frac{\eta}{|B|}\sum_{i∈B}\partial_{w}l^{(i)}(w,b)$
+    * $b\leftarrow b -\frac{\eta}{|B|}\sum_{i∈B}\partial_{b}l^{(i)}(w,b)$
+
+### 6.泛化(Generalization)：在未知数据集上实现较小的损失
+
+### 7.正态分布(Normal Distribution)：正态分布与线性回归关系密切，其也被称之为高斯分布(Gaussian Distribution)
+
+$$
+\begin{align*}
+f(x) &= \frac{1}{\sqrt{2\pi}\sigma} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)
+\end{align*}
+$$
+
+* $μ$为均值，$\sigma$为标准差，$\sigma^2$为方差
+* 改变均值$μ$会产生沿X轴的便宜，增加方差$\sigma^2$会分散分布、降低其峰值
+
+### 8.噪声：通常指模型输入或输出中的不确定性或随机性
+
+### 9.均方误差损失函数可用于线性回归原因：假设观测中包含噪声，其噪声服从正态分布：$y=w^Tx + b + \epsilon$，其中，$\epsilon \sim N(0,\sigma^2)$。
+
+* 给定的x观测到特定y的似然(Likelihood)：$\begin{align*}
+    P(y|x) &= \frac{1}{\sqrt{2\pi}\sigma} \exp\left(-\frac{(y-w^Tx-b)^2}{2\sigma^2}\right)
+    \end{align*}$
+    * exp表示指数函数，exp(x)表示$e^x$
+    * 似然度表示参数值对观测数据的拟合程度
+
+* 此时，参数w和b最优解则是使整个数据集的似然最大的值：$P(y|X)=\prod_{i=1}^np(y^{(i)}|x^{(i)})$。通过极大似然估计法得到的估计量称为极大似然估计量
+* 在深度学习中，一般用最小化来表示最优解，因此可以将公式改为：$-logP(y|X)=\sum_{i=1}^n\frac{1}{2}log(2\pi\sigma^2)+\frac{1}{2\sigma^2}(y-w^Tx-b)^2$
+
+### 10.神经网络：详细看[神经网络](.\神经网络.md)
+
+
+
+## 3.2 线性回归的实现
+
+1.生成数据集：一个包含1000个样本，且每个样本包含从正态分布中抽样的两个特征。即$X∈R^{1000×2}$
+
+* 参数：$w = [2,-3.4]^T,b=4.2$，具有噪声项$\epsilon \sim N(0,\sigma^2 )，\sigma = 0.01$
+* torch.normal(mean, std, size, *, generator=None, out=None) → Tensor：用于生成服从正态分布的随机数
+    * mean（张量或标量）：正态分布的均值。
+    * std（张量或标量）：正态分布的标准差。
+    * size（整数或元组）：生成的随机张量的形状。可以是整数（生成一维张量）或元组（生成多维张量）。
+    * generator（可选）：用于生成随机数的生成器。如果为None，将使用默认生成器。
+    * out（可选）：指定输出张量的位置。
+
+* torch.matmul(input, other, out=None) → Tensor：用于执行矩阵乘法（矩阵相乘）的函数
+    * input（张量）：输入张量，可以是矩阵或向量。
+    * other（张量）：与input进行乘法运算的第二个张量，可以是矩阵或向量。
+    * out（可选）：指定输出张量的位置。
+
+
+```python
+# IMPORT
+import random
+import torch
+from d2l import torch as d2l
+
+# PROGRAM
+def synthetic_data(w, b, num_examples):
+	"""
+	生成y=Xw+b+噪声
+	:param w: 权重
+	:param b: 偏置
+	:param num_examples:数据集大小
+	:return: X,y
+	"""
+	X = torch.normal(0, 1, (num_examples, len(w)))
+	y = torch.matmul(X, w) + b
+	y += torch.normal(0, 0.01, y.shape)  # 加上噪声
+	return X, y.reshape((-1, 1))  # 返回X和只有一列的二维张量y
+
+
+true_w = torch.tensor([2, -3.4])
+true_b = 4.2
+features, labels = synthetic_data(true_w, true_b, 1000)
+
+print(features[0])  # features的每一行是一个长度为2的数据样本
+print(labels[0])    # labels的每一行是一个长度为1的标签值
+
+# RESULT
+tensor([ 0.1530, -1.4735])
+tensor([9.5199])
+```
+
+* 可视化：
+
+    ```python
+    d2l.set_figsize()
+    d2l.plt.scatter(features[:, 1].detach().numpy(), labels.detach().numpy(), 1)
+    d2l.plt.show()
+    ```
+
+    <img src="动手学深度学习Pytorch.assets/image-20240129134017182.png" alt="image-20240129134017182"  />
+
+
+
+2.读取数据集：打乱数据集中的样本并以小批量方式获取数据
+
+```python
+# PROGRAM
+# 继承1.的代码
+# def synthetic_data ....
+# true_w ....
+def data_iter(batch_size, features, labels):
+	"""
+	读取数据集
+	:param batch_size: 每一个批次的大小
+	:param features: 特征
+	:param labels: 标签
+	:return: None
+	"""
+	num_examples = len(features)
+	includes = list(range(num_examples))  # 读取索引
+	random.shuffle(includes)  # 打乱读取顺序
+
+	for i in range(0, num_examples, batch_size):
+		# 每次读取batch_size个样本
+		batch_indices = torch.tensor(includes[i:min(i + batch_size, num_examples)])
+		yield features[batch_indices], labels[batch_indices]  # 返回迭代器
+    
+ 
+batch_size = 10
+for X, y in data_iter(batch_size, features, labels):
+	print(X, '\n', y)  # 只输出第一批次的features和labels
+	break
+    
+# RESULT
+tensor([[ 1.9054,  0.0446],
+        [-1.3093, -0.9462],
+        [ 1.2880,  0.9403],
+        [ 0.7291, -1.2449],
+        [-1.2873, -0.3194],
+        [ 0.4855, -0.9877],
+        [ 1.4246, -0.1040],
+        [-0.1883, -0.1622],
+        [ 0.9181, -0.7175],
+        [ 2.2479, -0.2268]]) 
+ tensor([[7.8480],
+        [4.8005],
+        [3.5708],
+        [9.8842],
+        [2.7236],
+        [8.5301],
+        [7.3947],
+        [4.4043],
+        [8.4624],
+        [9.4725]])
+```
+
+
+
+3.初始化模型参数：初始化w和b，而目的是在训练中更新这些参数
+
+```python
+# PROGRAM
+w = torch.normal(0, 0.01, size=(2, 1), requires_grad=True)
+b = torch.zeros(1, requires_grad=True)
+```
+
+
+
+4.定义模型：将模型的输入和参数同模型的输出相关联
+
+* Xw是一个向量，b是一个标量
+* 广播机制：向量+标量=标量被加到向量的每个分量上
+
+```python
+def linreg(X, w, b):
+	"""
+	线性回归模型
+	:param X: 特征
+	:param w: 权重
+	:param b: 偏置
+	:return: y
+	"""
+	return torch.matmul(X, w) + b
+```
+
+
+
+5.定义损失函数：用于计算损失函数的梯度，在此使用平方损失函数
 
